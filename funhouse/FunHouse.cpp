@@ -1,6 +1,8 @@
 #include "phantomstyle.h"
 #include <QAction>
 #include <QBoxLayout>
+#include <QCheckBox>
+#include <QComboBox>
 #include <QDebug>
 #include <QFormLayout>
 #include <QHeaderView>
@@ -11,7 +13,9 @@
 #include <QMenuBar>
 #include <QMetaEnum>
 #include <QPainter>
+#include <QProgressBar>
 #include <QPushButton>
+#include <QSpinBox>
 #include <QSplitter>
 #include <QStatusBar>
 #include <QTabBar>
@@ -53,6 +57,53 @@ QWidget* treeAndDetailsWidget() {
   form->addRow("Address", new QLineEdit("Cool Place"));
   hbox->addLayout(form);
   w->setLayout(hbox);
+  return w;
+}
+
+QWidget* multiColumnTreeList() {
+  auto w = new QWidget;
+  auto hbox = new QHBoxLayout;
+  auto tree = new QTreeWidget;
+  tree->setColumnCount(3);
+  for (int i = 0; i < 5; ++i) {
+    auto item = new QTreeWidgetItem(tree);
+    item->setText(0, QString::asprintf("Item %d", i));
+    for (int j = 0; j < 5; ++j) {
+      auto item0 = new QTreeWidgetItem(item);
+      item0->setText(0, QString::asprintf("Nested %d", j));
+      if (j == 3)
+        item0->setData(0, Qt::DecorationRole, QColor(120, 120, 60));
+      for (int k = 0; k < 5; ++k) {
+        auto item1 = new QTreeWidgetItem(item0);
+        item1->setText(0, QString::asprintf("Nested Again %d", k));
+        for (int l = 0; l < 5; ++l) {
+          auto item2 = new QTreeWidgetItem(item1);
+          item2->setText(0, QString::asprintf("Nested Yet Again %d", l));
+        }
+      }
+    }
+  }
+  auto form = new QFormLayout;
+  auto spanCheck = new QCheckBox("All columns show focus");
+  auto selCheck = new QCheckBox("Extend selection");
+  auto onUpdate = [tree, spanCheck, selCheck] {
+    bool allFocus = spanCheck->isChecked();
+    if (tree->allColumnsShowFocus() != allFocus)
+      tree->setAllColumnsShowFocus(allFocus);
+    QAbstractItemView::SelectionMode selMode =
+        selCheck->isChecked() ? QAbstractItemView::ExtendedSelection
+                              : QAbstractItemView::SingleSelection;
+    if (tree->selectionMode() != selMode)
+      tree->setSelectionMode(selMode);
+  };
+  QObject::connect(spanCheck, &QCheckBox::toggled, spanCheck, onUpdate);
+  QObject::connect(selCheck, &QCheckBox::toggled, selCheck, onUpdate);
+  form->addWidget(spanCheck);
+  form->addWidget(selCheck);
+  hbox->addWidget(tree);
+  hbox->addLayout(form);
+  w->setLayout(hbox);
+  onUpdate();
   return w;
 }
 
@@ -133,21 +184,66 @@ QWidget* tabBarOnly() {
 
 QWidget* coolButtons() {
   auto w = new QWidget;
-  auto vbox = new QHBoxLayout;
+  auto vbox = new QVBoxLayout;
+  auto hbox0 = new QHBoxLayout;
 
   auto pb0 = new QPushButton;
-  vbox->addWidget(pb0);
+  hbox0->addWidget(pb0);
   auto pb1 = new QPushButton;
   pb1->setText("Just text");
-  vbox->addWidget(pb1);
+  hbox0->addWidget(pb1);
   auto pb2 = new QPushButton;
   pb2->setText("Text and icon");
   pb2->setIcon(w->style()->standardIcon(QStyle::SP_ComputerIcon));
-  vbox->addWidget(pb2);
+  hbox0->addWidget(pb2);
   auto pb3 = new QPushButton;
   pb3->setIcon(w->style()->standardIcon(QStyle::SP_ComputerIcon));
-  vbox->addWidget(pb3);
+  hbox0->addWidget(pb3);
 
+  auto hbox1 = new QHBoxLayout;
+  auto cb0 = new QComboBox;
+  cb0->setEditable(true);
+  hbox1->addWidget(cb0);
+  auto cb1 = new QComboBox;
+  cb1->setEditable(true);
+  cb1->setEnabled(false);
+  hbox1->addWidget(cb1);
+  auto cb2 = new QComboBox;
+  cb2->setEditable(true);
+  cb2->addItem("One but with quite a bit of text");
+  cb2->addItem("Two");
+  cb2->addItem("Three");
+  hbox1->addWidget(cb2);
+  auto cb3 = new QComboBox;
+  cb3->addItem("Here's quite a bit of text");
+  hbox1->addWidget(cb3);
+
+  auto hbox2 = new QHBoxLayout;
+  auto tb0 = new QToolButton;
+  tb0->setText("Tool button");
+  hbox2->addWidget(tb0);
+  auto tb1 = new QToolButton;
+  tb1->setIcon(w->style()->standardIcon(QStyle::SP_ComputerIcon));
+  hbox2->addWidget(tb1);
+  auto tb2 = new QToolButton;
+  auto tb2menu = new QMenu;
+  tb2menu->setTitle("Normal");
+  tb2menu->addAction("One");
+  tb2menu->addAction("Two");
+  tb2->setDefaultAction(tb2menu->menuAction());
+  hbox2->addWidget(tb2);
+  auto tb3 = new QToolButton;
+  auto tb3menu = new QMenu;
+  tb3menu->setTitle("Instant");
+  tb3menu->addAction("One");
+  tb3menu->addAction("Two");
+  tb3->setDefaultAction(tb3menu->menuAction());
+  tb3->setPopupMode(QToolButton::InstantPopup);
+  hbox2->addWidget(tb3);
+
+  vbox->addLayout(hbox0);
+  vbox->addLayout(hbox1);
+  vbox->addLayout(hbox2);
   w->setLayout(vbox);
   return w;
 }
@@ -209,6 +305,28 @@ QWidget* tableWithColumns() {
     sep->setSeparator(true);
     acts += sep;
   };
+  auto sortA = new QAction(w);
+  sortA->setText("Sorting");
+  sortA->setCheckable(true);
+  QObject::connect(sortA, &QAction::triggered, w,
+                   [w](bool checked) { w->setSortingEnabled(checked); });
+  acts += sortA;
+  auto alwaysScrollHA = new QAction(w);
+  alwaysScrollHA->setText("Always show H Scrollbar");
+  alwaysScrollHA->setCheckable(true);
+  QObject::connect(alwaysScrollHA, &QAction::triggered, w, [w](bool checked) {
+    w->setHorizontalScrollBarPolicy(checked ? Qt::ScrollBarAlwaysOn
+                                            : Qt::ScrollBarAsNeeded);
+  });
+  auto alwaysScrollVA = new QAction(w);
+  alwaysScrollVA->setText("Always show V Scrollbar");
+  alwaysScrollVA->setCheckable(true);
+  QObject::connect(alwaysScrollVA, &QAction::triggered, w, [w](bool checked) {
+    w->setVerticalScrollBarPolicy(checked ? Qt::ScrollBarAlwaysOn
+                                          : Qt::ScrollBarAsNeeded);
+  });
+  acts += alwaysScrollHA;
+  acts += alwaysScrollVA;
   auto stretchHorizA = new QAction(w);
   stretchHorizA->setText("Stretch Last Horizontal");
   stretchHorizA->setCheckable(true);
@@ -251,6 +369,63 @@ QWidget* tableWithColumns() {
   w->verticalHeader()->setContextMenuPolicy(Qt::ActionsContextMenu);
   return w;
 }
+
+QWidget* verticalSizes() {
+  auto w = new QWidget;
+  auto vbox = new QVBoxLayout;
+
+  auto hbox0 = new QHBoxLayout;
+  auto le0 = new QLineEdit;
+  le0->setText("Hello");
+  hbox0->addWidget(le0);
+  auto cb0 = new QComboBox;
+  cb0->setEditable(true);
+  cb0->addItem("One");
+  cb0->addItem("Two");
+  cb0->addItem("Three");
+  hbox0->addWidget(cb0);
+  auto cb1 = new QComboBox;
+  cb1->setEditable(false);
+  cb1->addItem("One");
+  cb1->addItem("Two");
+  cb1->addItem("Three");
+  hbox0->addWidget(cb1);
+
+  vbox->addLayout(hbox0);
+  w->setLayout(vbox);
+  return w;
+}
+
+QWidget* progressBars() {
+  auto w = new QWidget;
+  auto vbox = new QVBoxLayout;
+  auto barsV = new QVBoxLayout;
+  auto barsH = new QHBoxLayout;
+  auto spin = new QSpinBox;
+  spin->setRange(0, 100);
+  spin->setValue(30);
+  for (auto orient : {Qt::Horizontal, Qt::Vertical}) {
+    for (auto isInvert : {false, true}) {
+      auto pbar = new QProgressBar;
+      pbar->setOrientation(orient);
+      pbar->setInvertedAppearance(isInvert);
+      if (orient == Qt::Horizontal) {
+        barsV->addWidget(pbar);
+      } else {
+        barsH->addWidget(pbar);
+      }
+      pbar->setRange(spin->minimum(), spin->maximum());
+      pbar->setValue(spin->value());
+      QObject::connect(spin, QOverload<int>::of(&QSpinBox::valueChanged), pbar,
+                       &QProgressBar::setValue);
+    }
+  }
+  vbox->addLayout(barsV);
+  vbox->addLayout(barsH);
+  vbox->addWidget(spin);
+  w->setLayout(vbox);
+  return w;
+}
 } // namespace
 
 QMainWindow* FunHouse_create(QWidget* parent) {
@@ -268,14 +443,17 @@ QMainWindow* FunHouse_create(QWidget* parent) {
   auto mainTabs = new QTabWidget;
   mainTabs->setDocumentMode(true);
   mainWindow->setCentralWidget(mainTabs);
+  mainTabs->addTab(progressBars(), "Progress Bars");
+  mainTabs->addTab(coolButtons(), "Push Buttons");
+  mainTabs->addTab(verticalSizes(), "VSizes");
   mainTabs->addTab(tableWithColumns(), "Table");
   mainTabs->addTab(frames(), "Frames");
-  mainTabs->addTab(coolButtons(), "Push Buttons");
   mainTabs->addTab(toolButtonTest(), "Tool Buttons");
   mainTabs->addTab(splitTest(), "Splitter");
   mainTabs->addTab(tabsInDirections(), "Tab Dirs");
   mainTabs->addTab(tabBarOnly(), "Tab Bar");
   mainTabs->addTab(treeAndDetailsWidget(), "Tree");
+  mainTabs->addTab(multiColumnTreeList(), "Tree Columns");
   mainWindow->statusBar()->setSizeGripEnabled(true);
 
   auto tbara = mainWindow->addToolBar("Tester A");

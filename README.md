@@ -1,18 +1,44 @@
 > And some say it's still using desktop computers, even to this day 👻
 
-![phantom screenshot light](https://cancel.fm/static/phantom_images/phantom_1x_demo.png)
+![phantom screenshot light](https://raw.githubusercontent.com/wiki/randrew/phantomstyle/images/phantom_demo_1x_light_3.png)
 
-![phantom screenshot dark](https://cancel.fm/static/phantom_images/phantom_1x_demo_dark.png)
+![phantom screenshot dark](https://raw.githubusercontent.com/wiki/randrew/phantomstyle/images/phantom_demo_1x_dark_3.png)
 
 [More screenshots](https://github.com/randrew/phantomstyle/wiki/Comparison-Screenshots)
 
-# Phantom Style
+## Phantom Style
 
 Phantom is a QStyle for Qt which began as an overhaul of QFusionStyle. Similar
 to Fusion, it's designed to be a looks-the-same cross-platform style. It looks
 native to nobody, but familiar to many. It has the visual appearance of a
 traditional GUI, and does not adopt a "modern flat" style. Compared to Fusion,
 it has many fixes, objective improvements, and subjective improvements:
+
+* [Usage](#usage)
+* [Compatibility](#compatibility)
+* [Changes from QFusionStyle](#changes-from-qfusionstyle)
+* [License](#license)
+* [TODO](#todo)
+
+## Usage
+
+### Built into an application
+
+Add `src/phantom/phantom.pri` to your qmake .pro file for your project. There
+are no additional dependencies. It's also safe to construct a PhantomStyle
+object before instantiating a QApplication, because it doesn't interact with
+the environment or anything else.
+
+### As a QStylePlugin
+
+A style plugin is available: [phantomstyleplugin.pro](src/styleplugin/phantomstyleplugin.pro)
+
+## Compatibility
+
+Tested on Qt 5.9 and later, but should work on earlier versions as well. Builds
+with MSVC (tested with 2017), GCC and clang.
+
+Uses `auto` from C++11, so C++11 is needed. C++14 and later are not needed.
 
 ## Changes from QFusionStyle
 
@@ -162,7 +188,7 @@ it has many fixes, objective improvements, and subjective improvements:
     `SH_Menu_SloppySubMenus`, but didn't also specify that the submenus should
     not be closed after a timeout if nothing else is moused over
     (`SH_Menu_SubMenuDontStartSloppyOnLeave`). It also did not specify
-    `SH_Menu_SubMenuUniDirection` and several other thints which should have
+    `SH_Menu_SubMenuUniDirection` and several other hints which should have
     been specified, which would cause the reactions of a QMenu to appear to lag
     behind the user's movements or to close submenus unnecessarily.
 
@@ -236,22 +262,6 @@ it has many fixes, objective improvements, and subjective improvements:
 
 * No warnings when building with -Wall.
 
-## Use
-
-Add `src/phantom/phantom.pri` to your qmake .pro file for your project. There
-are no additional dependencies. It's also safe to construct a PhantomStyle
-object before instantiating a QApplication, because it doesn't interact with
-the environment or anything else.
-
-A QStylePlugin hasn't been written yet, but should be easy to write.
-
-## Compatibility
-
-Tested on Qt 5.9 and later, but should work on earlier versions as well. Builds
-with MSVC (tested with 2017), GCC and clang.
-
-Uses `auto` from C++11, so C++11 is needed. C++14 and later are not needed.
-
 ## License
 
 LGPL 2.1.
@@ -268,13 +278,8 @@ decorations and QDial.)
 ## TODO
 
 * More screenshots
-
 * Several things haven't been fully tested (MDI windows, tick marks on sliders,
   a few more I can't think of.)
-
-* Several widgets draw arrow indicators with the wrong size (tool buttons with
-  non-immediate popup mode)
-
 * Probably lots of bugs
 
 ```
