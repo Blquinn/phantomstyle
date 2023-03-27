@@ -12,11 +12,17 @@ include(GNUInstallDirs)
 find_package(QT NAMES Qt5 Qt6 REQUIRED COMPONENTS Core)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Gui Widgets)
 
+set(SOURCES
+    phantom/phantomcolor.cpp
+    phantom/phantomstyle.cpp
+    styleplugin/phantomstyleplugin.cpp
+)
+
 
 if (${QT_VERSION_MAJOR} GREATER_EQUAL 6)
-    qt_add_plugin(phantomstyleplugin)
+    qt_add_plugin(phantomstyleplugin ${SOURCES})
 else()
-    add_library(phantomstyleplugin SHARED)
+    add_library(phantomstyleplugin SHARED ${SOURCES})
 endif()
 
 target_sources(phantomstyleplugin PRIVATE
@@ -28,15 +34,17 @@ target_sources(phantomstyleplugin PRIVATE
     styleplugin/phantomstyleplugin.h
 )
 
-set_target_properties(phantomstyleplugin PROPERTIES SOVERSION 1)
-
-set_target_properties(phantomstyleplugin PROPERTIES PUBLIC_HEADER
-    phantom.h
+set_target_properties(phantomstyleplugin PROPERTIES
+    SOVERSION 1
+    PUBLIC_HEADER phantom.h
 )
 
 target_include_directories(phantomstyleplugin PRIVATE
     phantom
+    styleplugin
 )
+
+configure_file(phantomstyleplugin.pc.in phantomstyleplugin.pc @ONLY)
 
 target_compile_definitions(phantomstyleplugin PRIVATE
     QT_DEPRECATED_WARNINGS
@@ -90,3 +98,6 @@ install(TARGETS phantomstyleplugin
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
+
+install(FILES ${CMAKE_BINARY_DIR}/phantomstyleplugin.pc
+    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/pkgconfig)
