@@ -352,6 +352,7 @@ using PhSwatchCache = QVarLengthArray<PhCacheEntry, Num_ColorCacheEntries>;
 Q_NEVER_INLINE void PhSwatch::loadFromQPalette(const QPalette& pal) {
   using namespace SwatchColors;
   namespace Dc = DeriveColors;
+  const bool isEnabled = pal.currentColorGroup() != QPalette::Disabled;
   QColor colors[Num_SwatchColors];
   colors[S_none] = QColor();
 
@@ -361,32 +362,42 @@ Q_NEVER_INLINE void PhSwatch::loadFromQPalette(const QPalette& pal) {
     colors[S_button] = Dc::adjustLightness(colors[S_button], 0.01);
   colors[S_base] = pal.color(QPalette::Base);
   colors[S_text] = pal.color(QPalette::Text);
-  colors[S_text] = pal.color(QPalette::WindowText);
   colors[S_windowText] = pal.color(QPalette::WindowText);
   colors[S_highlight] = pal.color(QPalette::Highlight);
   colors[S_highlightedText] = pal.color(QPalette::HighlightedText);
   colors[S_scrollbarGutter] = Dc::gutterColorOf(pal);
 
-  colors[S_window_outline] = Dc::adjustLightness(colors[S_window], -0.1);
-  colors[S_window_specular] = Dc::specularOf(colors[S_window]);
+  // There's a chance that some widgets won't redraw when changing to and from
+  // the disabled state, causing the outline color in the frame buffer to be
+  // out of sync with what it should be. If we notice this problem, we can get
+  // rid of conditional color branching and try to do it some other way.
+  colors[S_window_outline] =
+      Dc::adjustLightness(colors[S_window], isEnabled ? -0.1 : -0.07);
+  colors[S_window_specular] =
+      isEnabled ? Dc::specularOf(colors[S_window]) : colors[S_window];
   colors[S_window_divider] = Dc::dividerColor(colors[S_window]);
   colors[S_window_lighter] = Dc::lightShadeOf(colors[S_window]);
   colors[S_window_darker] = Dc::darkShadeOf(colors[S_window]);
-  colors[S_button_specular] = Dc::specularOf(colors[S_button]);
+  colors[S_button_specular] =
+      isEnabled ? Dc::specularOf(colors[S_button]) : colors[S_button];
   colors[S_button_pressed] = Dc::pressedOf(colors[S_button]);
-  colors[S_button_pressed_specular] = Dc::specularOf(colors[S_button_pressed]);
+  colors[S_button_pressed_specular] =
+      isEnabled ? Dc::specularOf(colors[S_button_pressed])
+                : colors[S_button_pressed];
   colors[S_base_shadow] = Dc::overhangShadowOf(colors[S_base]);
   colors[S_base_divider] = Dc::dividerColor(colors[S_base]);
   colors[S_windowText_disabled] =
       pal.color(QPalette::Disabled, QPalette::WindowText);
   colors[S_highlight_outline] = Dc::adjustLightness(colors[S_highlight], -0.05);
-  colors[S_highlight_specular] = Dc::specularOf(colors[S_highlight]);
+  colors[S_highlight_specular] =
+      isEnabled ? Dc::specularOf(colors[S_highlight]) : colors[S_highlight];
   colors[S_progressBar_outline] = Dc::progressBarOutlineColorOf(pal);
   colors[S_inactiveTabYesFrame] =
       Dc::inactiveTabFillColorOf(colors[S_tabFrame]);
   colors[S_inactiveTabNoFrame] = Dc::inactiveTabFillColorOf(colors[S_window]);
   colors[S_inactiveTabYesFrame_specular] =
-      Dc::specularOf(colors[S_inactiveTabYesFrame]);
+      isEnabled ? Dc::specularOf(colors[S_inactiveTabYesFrame])
+                : colors[S_inactiveTabYesFrame];
   colors[S_inactiveTabNoFrame_specular] =
       Dc::specularOf(colors[S_inactiveTabNoFrame]);
   colors[S_indicator_current] = Dc::indicatorColorOf(pal, QPalette::Current);
@@ -4464,7 +4475,27 @@ QSize PhantomStyle::sizeFromContents(ContentsType type,
     auto pbopt = qstyleoption_cast<const QStyleOptionButton*>(option);
     if (!pbopt || pbopt->text.isEmpty())
       break;
-    int hpad = (int)((qreal)pbopt->fontMetrics.height() *
+    int fmheight = pbopt->fontMetrics.height();
+    // In high DPI, the measured height of a line of text and the height of the
+    // font as reported by QFontMetrics may differ slightly. This is fine,
+    // except that we want QPushButtons to have the same height as QComboBoxes,
+    // assuming the QPushButton's text isn't multi-line. (QComboBox does not
+    // handle multi-line text.) QPushButton will give us a contents height from
+    // the actual measured text. QComboBox (and others) will use the font
+    // metrics height. Workaround: if there's text and the height is slightly
+    // different, adjust by difference in the font metrics height and measured
+    // text height. We'll try to avoid clobbering non-standard heights caused
+    // by icons or other things.
+    if (!pbopt->text.isEmpty()) {
+      int vdiff = qAbs(fmheight - size.height());
+      // Limit height diff to 2 (scaled) pixels. It's possible that this still
+      // clobbers a non-standard height caused by a special-sized icon or
+      // something, but there's not much we can do about it.
+      if (vdiff != 0 && vdiff <= 2) {
+        newSize.rheight() += fmheight - size.height();
+      }
+    }
+    int hpad = (int)((qreal)fmheight *
                      Phantom::PushButton_HorizontalPaddingFontHeightRatio);
     newSize.rwidth() += hpad * 2;
 #if QT_CONFIG(dialogbuttonbox)
@@ -5032,12 +5063,14 @@ int PhantomStyle::styleHint(StyleHint hint, const QStyleOption* option,
   case SH_Table_GridLineColor: {
     using namespace Phantom::SwatchColors;
     namespace Ph = Phantom;
+    if (!option)
+      return 0;
     auto ph_swatchPtr = Ph::getCachedSwatchOfQPalette(
         &d->swatchCache, &d->headSwatchFastKey, option->palette);
     const Ph::PhSwatch& swatch = *ph_swatchPtr.data();
     // Qt code in table views for drawing grid lines is broken. See case for
     // CE_ItemViewItem painting for more information.
-    return option ? (int)swatch.color(S_base_divider).rgb() : 0;
+    return (int)swatch.color(S_base_divider).rgb();
   }
   case SH_MessageBox_TextInteractionFlags:
     return Qt::TextSelectableByMouse | Qt::LinksAccessibleByMouse;
