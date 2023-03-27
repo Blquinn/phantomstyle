@@ -30,7 +30,11 @@ target_sources(phantomstyleplugin PRIVATE
 
 set_target_properties(phantomstyleplugin PROPERTIES SOVERSION 1)
 
-target_include_directories(phantomstyleplugin PUBLIC
+set_target_properties(phantomstyleplugin PROPERTIES PUBLIC_HEADER
+    phantom.h
+)
+
+target_include_directories(phantomstyleplugin PRIVATE
     phantom
 )
 
@@ -84,4 +88,5 @@ install(TARGETS phantomstyleplugin
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     FRAMEWORK DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
