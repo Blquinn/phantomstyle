@@ -12,34 +12,24 @@ include(GNUInstallDirs)
 find_package(QT NAMES Qt5 Qt6 REQUIRED COMPONENTS Core)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Gui Widgets)
 
-set(SOURCES
+if (${QT_VERSION_MAJOR} GREATER_EQUAL 6)
+    qt_add_plugin(phantomstyleplugin)
+else()
+    add_library(phantomstyleplugin SHARED)
+endif()
+
+target_sources(phantomstyleplugin PRIVATE
     phantom/phantomcolor.cpp
     phantom/phantomstyle.cpp
     styleplugin/phantomstyleplugin.cpp
 )
 
+# set_target_properties(phantomstyleplugin PROPERTIES
+#     SOVERSION 1
+#     PUBLIC_HEADER include/phantom.h
+# )
 
-if (${QT_VERSION_MAJOR} GREATER_EQUAL 6)
-    qt_add_plugin(phantomstyleplugin ${SOURCES})
-else()
-    add_library(phantomstyleplugin SHARED ${SOURCES})
-endif()
-
-target_sources(phantomstyleplugin PRIVATE
-    phantom/phantomcolor.cpp phantom/phantomcolor.h
-    phantom/phantomstyle.cpp phantom/phantomstyle.h
-    phantom/phantomtweak.h
-
-    styleplugin/phantomstyleplugin.cpp
-    styleplugin/phantomstyleplugin.h
-)
-
-set_target_properties(phantomstyleplugin PROPERTIES
-    SOVERSION 1
-    PUBLIC_HEADER phantom.h
-)
-
-target_include_directories(phantomstyleplugin PRIVATE
+target_include_directories(phantomstyleplugin PUBLIC
     phantom
     styleplugin
 )
